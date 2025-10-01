@@ -9,29 +9,18 @@ struct DelayTimerView: View {
     
     var body: some View {
         VStack(spacing: 16) {
-            Text("Delay the urge (10 minutes)")
-                .font(.title3).bold()
-            Text("Urges rise and fall like waves. Let’s surf it.")
-                .foregroundStyle(.secondary)
-            
+            Text("Delay the urge (10 minutes)").font(.title3).bold()
+            Text("Urges rise and fall like waves. Let’s surf it.").foregroundStyle(.secondary)
             Text(timeString(secondsRemaining))
                 .font(.system(size: 48, weight: .bold, design: .rounded))
                 .monospacedDigit()
                 .contentTransition(.numericText())
-            
-            ProgressView(value: Double(600 - secondsRemaining), total: 600)
-                .tint(.white)
-            
+            ProgressView(value: Double(600 - secondsRemaining), total: 600).tint(.white)
             HStack {
-                Button(running ? "Pause" : "Start") {
-                    running.toggle()
-                    Haptics.lightTap()
-                }
-                .buttonStyle(.borderedProminent)
-                
+                Button(running ? "Pause" : "Start") { running.toggle(); Haptics.lightTap() }
+                    .buttonStyle(.borderedProminent)
                 if secondsRemaining < 600 {
-                    Button("Skip") { onDone() }
-                        .buttonStyle(.bordered)
+                    Button("Skip") { onDone() }.buttonStyle(.bordered)
                 }
             }
         }
@@ -43,7 +32,7 @@ struct DelayTimerView: View {
             }
             if secondsRemaining == 0 { onDone() }
         }
-        .onChange(of: phase) { newPhase in
+        .onChange(of: phase) { _, newPhase in
             if newPhase == .background { lastBackgroundDate = Date() }
             if newPhase == .active, let last = lastBackgroundDate, running {
                 let delta = Int(Date().timeIntervalSince(last))
@@ -53,8 +42,7 @@ struct DelayTimerView: View {
     }
     
     private func timeString(_ s: Int) -> String {
-        let m = s / 60
-        let r = s % 60
+        let m = s / 60; let r = s % 60
         return String(format: "%02d:%02d", m, r)
     }
 }

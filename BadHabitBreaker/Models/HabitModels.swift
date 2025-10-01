@@ -3,7 +3,6 @@ import Foundation
 enum HabitType: String, CaseIterable, Identifiable, Codable {
     case nicotine, sugar, doomscrolling, alcohol, gambling, porn, custom
     var id: String { rawValue }
-    
     var display: String {
         switch self {
         case .nicotine: return "Nicotine"
@@ -31,6 +30,52 @@ struct RelapseEvent: Identifiable, Codable {
     var notes: String?
 }
 
+// NEW: User-saved urges they want to prevent
+struct UserUrge: Identifiable, Codable, Equatable {
+    var id = UUID()
+    var type: HabitType
+    var customName: String?
+    var whatDoingNow: String?
+    var whatWorks: [String] = []
+    var whatDoesnt: [String] = []
+    var temptations: [String] = []
+    var currentStreak: Int = 0
+    var lastRelapseDate: Date?
+    var createdAt: Date = Date()
+    var displayName: String {
+        type == .custom ? (customName ?? "Custom") : type.display
+    }
+}
+
+// NEW: SOS feedback tallies (simple counters)
+struct UrgeFeedback: Codable {
+    var helpedCount: Int = 0
+    var stillUrgeCount: Int = 0
+}
+
+/** Daily check-ins (EMA-style) */
+struct CheckIn: Identifiable, Codable, Equatable {
+    var id = UUID()
+    var date: Date = Date()
+    var mood: Int      // 1–5
+    var craving: Int   // 0–10
+    var halt: [String] // e.g., ["Hungry","Tired"]
+    var notes: String?
+}
+
+struct IfThenRule: Identifiable, Codable, Equatable {
+    var id = UUID()
+    var cue: String
+    var action: String
+    var isActive: Bool = true
+}
+
+struct BuddyContact: Identifiable, Codable, Equatable {
+    var id = UUID()
+    var name: String
+    var phone: String // e.g. +1xxxxxxxxxx
+}
+
 struct AppState: Codable {
     var hasOnboarded: Bool = false
     var habit: HabitConfig = HabitConfig(type: .nicotine, customName: nil, triggers: [], panicPlan: "Step outside + cold water + text accountability buddy.")
@@ -38,6 +83,15 @@ struct AppState: Codable {
     var successfulUrges: Int = 0
     var dailyRemindersEnabled: Bool = false
     var reminderTimes: [DateComponents] = []
+    // Extended
+    var ifThenRules: [IfThenRule] = []
+    var buddies: [BuddyContact] = []
+    var checkIns: [CheckIn] = []
+    var homeAddress: String? = nil
+    // NEW:
+    var myUrges: [UserUrge] = []
+    var gameHighScore: Int = 0
+    var sosFeedback: UrgeFeedback = .init()
 }
 
 extension Array where Element == RelapseEvent {
@@ -49,7 +103,6 @@ extension AppState {
         guard let last = relapseLog.lastRelapseDate else { return daysBetween(from: installAnchorDate(), to: Date()) }
         return daysBetween(from: last, to: Date())
     }
-    
     private func installAnchorDate() -> Date {
         Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
     }

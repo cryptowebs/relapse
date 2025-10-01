@@ -10,16 +10,17 @@ final class NotificationManager {
         _ = try? await center.requestAuthorization(options: [.alert, .sound, .badge])
     }
     
-    func scheduleDailyReminders(times: [DateComponents]) async {
+    // Not async — UNUserNotificationCenter methods below are sync in this SDK.
+    func scheduleDailyReminders(times: [DateComponents]) {
         let center = UNUserNotificationCenter.current()
-        await center.removeAllPendingNotificationRequests()
+        center.removeAllPendingNotificationRequests()
         for (idx, comps) in times.enumerated() {
             let content = UNMutableNotificationContent()
             content.title = "Check-in"
             content.body = "Quick urge check: 2 mins of breathing beats 20 mins of regret."
             let trigger = UNCalendarNotificationTrigger(dateMatching: comps, repeats: true)
             let req = UNNotificationRequest(identifier: "daily-\(idx)", content: content, trigger: trigger)
-            try? await center.add(req)
+            center.add(req)
         }
     }
 }

@@ -1,15 +1,20 @@
 import SwiftUI
+import MapKit
 
 struct HomeView: View {
     @EnvironmentObject var store: HabitStore
+    @Environment(\.openURL) private var openURL
     @State private var showFlow = false
     @State private var showSettings = false
+    @State private var showCheckIn = false
+    @State private var showRules = false
+    @State private var showBuddies = false
+    @State private var showTrends = false
     
     var habitName: String {
         let h = store.state.habit
         return h.type == .custom ? (h.customName ?? "My Habit") : h.type.display
     }
-    
     var riskScore: Double {
         let hour = Calendar.current.component(.hour, from: Date())
         let timeRisk: Double = (18...23).contains(hour) ? 0.55 : (14...17).contains(hour) ? 0.35 : 0.2
@@ -22,6 +27,7 @@ struct HomeView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 18) {
+                    // header
                     VStack(alignment: .leading, spacing: 8) {
                         HStack(spacing: 10) {
                             Image(systemName: "wind.circle.fill")
@@ -35,47 +41,45 @@ struct HomeView: View {
                                         .foregroundStyle(.orange)
                                     Label("\(store.state.successfulUrges)", systemImage: "checkmark.circle.fill")
                                         .foregroundStyle(.green)
-                                }
-                                .font(.subheadline)
+                                }.font(.subheadline)
                             }
                             Spacer()
                         }
-                    }
-                    .glassCard()
+                    }.glassCard()
                     
                     RiskMeterView(score: riskScore)
                     
+                    // plan
                     VStack(alignment: .leading, spacing: 10) {
-                        HStack {
-                            Label("Plan for an urge", systemImage: "shield.lefthalf.filled")
-                                .font(.headline)
-                            Spacer()
-                        }
+                        Label("Plan for an urge", systemImage: "shield.lefthalf.filled").font(.headline)
                         Text(store.state.habit.panicPlan)
-                            .font(.body)
-                            .foregroundStyle(.primary)
-                            .multilineTextAlignment(.leading)
-                    }
-                    .glassCard()
+                    }.glassCard()
                     
-                    if !store.state.habit.triggers.isEmpty {
-                        VStack(alignment: .leading, spacing: 10) {
-                            Label("Common triggers", systemImage: "exclamationmark.triangle.fill")
-                                .font(.headline)
-                            FlowLayout(items: store.state.habit.triggers) { t in
-                                Text(t)
-                                    .font(.callout.weight(.medium))
-                                    .padding(.horizontal, 12).padding(.vertical, 7)
-                                    .background(.thinMaterial, in: Capsule())
-                                    .overlay(Capsule().strokeBorder(.white.opacity(0.06)))
-                            }
+                    // quick actions grid
+                    VStack(spacing: 12) {
+                        HStack(spacing: 12) {
+                            ActionTile(title: "Check-in", icon: "square.and.pencil") { showCheckIn = true }
+                            ActionTile(title: "If-Then", icon: "list.bullet.rectangle") { showRules = true }
                         }
-                        .glassCard()
+                        HStack(spacing: 12) {
+                            ActionTile(title: "Buddies", icon: "person.2.fill") { showBuddies = true }
+                            ActionTile(title: "Trends", icon: "chart.bar.xaxis") { showTrends = true }
+                        }
+                    }
+                    
+                    // escape route if homeAddress set
+                    if let addr = store.state.homeAddress, !addr.isEmpty {
+                        Button {
+                            let q = addr.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+                            if let url = URL(string: "http://maps.apple.com/?daddr=\(q)") { openURL(url) }
+                        } label: {
+                            Label("Get me out of here (Maps to \(addr))", systemImage: "map.fill")
+                        }
+                        .buttonStyle(.bordered)
                     }
                     
                     Button {
-                        Haptics.lightTap()
-                        showFlow = true
+                        Haptics.lightTap(); showFlow = true
                     } label: {
                         Label("I’m having an urge", systemImage: "lifepreserver.fill")
                             .font(.title3.weight(.bold))
@@ -91,71 +95,94 @@ struct HomeView: View {
                     Button { showSettings = true } label: { Image(systemName: "gearshape") }
                 }
             }
-            .sheet(isPresented: $showFlow) {
-                ZStack {
-                    AppTheme.bgGradient.ignoresSafeArea()
-                    UrgeFlowView()
-                        .environmentObject(store)
-                        .presentationDetents([.medium, .large])
-                }
-            }
-            .sheet(isPresented: $showSettings) {
-                ZStack {
-                    AppTheme.bgGradient.ignoresSafeArea()
-                    SettingsView()
-                        .environmentObject(store)
-                }
-            }
+            .sheet(isPresented: $showFlow) { UrgeSheet().environmentObject(store) }
+            .sheet(isPresented: $showSettings) { SettingsSheet().environmentObject(store) }
+            .sheet(isPresented: $showCheckIn) { CheckInView().environmentObject(store) }
+            .sheet(isPresented: $showRules) { IfThenLibraryView().environmentObject(store) }
+            .sheet(isPresented: $showBuddies) { BuddySupportView().environmentObject(store) }
+            .sheet(isPresented: $showTrends) { NavigationStack { TrendsView().environmentObject(store) } }
             .scrollIndicators(.hidden)
+            .background(AppTheme.bgGradient.ignoresSafeArea())
         }
     }
 }
 
-/// tiny helper to lay out trigger chips
-struct FlowLayout<Content: View, T: Hashable>: View {
-    let items: [T]
-    let content: (T) -> Content
-    @State private var totalHeight: CGFloat = .zero
+private struct ActionTile: View {
+    let title: String; let icon: String; let action: () -> Void
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 8) {
+                Image(systemName: icon).font(.title2)
+                Text(title).font(.subheadline)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
+            .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(.white.opacity(0.06)))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private struct UrgeSheet: View {
+    @EnvironmentObject var store: HabitStore
+    var body: some View {
+        ZStack {
+            AppTheme.bgGradient.ignoresSafeArea()
+            UrgeFlowView()
+                .presentationDetents([.medium, .large])
+        }
+    }
+}
+
+private struct SettingsSheet: View {
+    @EnvironmentObject var store: HabitStore
+    @State private var enabled: Bool = false
+    @State private var address = ""
+    @State private var exportURL: URL? = nil
+    @State private var showShare = false
     
     var body: some View {
-        VStack {
-            GeometryReader { geo in
-                self.generate(in: geo)
-            }
-        }
-        .frame(height: totalHeight)
-    }
-    
-    private func generate(in g: GeometryProxy) -> some View {
-        var width = CGFloat.zero
-        var height = CGFloat.zero
-        
-        return ZStack(alignment: .topLeading) {
-            ForEach(items, id: \.self) { item in
-                content(item)
-                    .padding([.vertical, .trailing], 6)
-                    .alignmentGuide(.leading) { d in
-                        if width + d.width > g.size.width {
-                            width = 0
-                            height -= d.height
+        NavigationStack {
+            Form {
+                Section("Reminders") {
+                    Toggle("Daily reminders", isOn: $enabled)
+                        .onChange(of: enabled) { _ in
+                            if !enabled { store.setReminders(enabled: false, times: []) }
                         }
-                        let result = width
-                        width += d.width
-                        return result
+                    if enabled {
+                        Text("Adjust times in Settings → Reminders")
+                            .font(.caption).foregroundStyle(.secondary)
                     }
-                    .alignmentGuide(.top) { _ in
-                        let result = height
-                        return result
-                    }
+                }
+                Section("Escape route") {
+                    TextField("Home address (for Maps)", text: $address)
+                    Button("Save address") { store.setHomeAddress(address); Haptics.success() }
+                }
+                Section("Export") {
+                    Button {
+                        exportURL = store.exportJSON()
+                        if exportURL != nil { showShare = true }
+                    } label: { Label("Export data (JSON)", systemImage: "square.and.arrow.up") }
+                }
+            }
+            .onAppear {
+                enabled = store.state.dailyRemindersEnabled
+                address = store.state.homeAddress ?? ""
+            }
+            .navigationTitle("Settings")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Close") { UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil) } }
             }
         }
-        .background(viewHeightReader($totalHeight))
-    }
-    
-    private func viewHeightReader(_ binding: Binding<CGFloat>) -> some View {
-        GeometryReader { geo -> Color in
-            DispatchQueue.main.async { binding.wrappedValue = -geo.frame(in: .local).origin.y }
-            return Color.clear
+        .sheet(isPresented: $showShare) {
+            if let url = exportURL { ShareView(url: url) }
         }
     }
+}
+
+private struct ShareView: UIViewControllerRepresentable {
+    let url: URL
+    func makeUIViewController(context: Context) -> UIActivityViewController { UIActivityViewController(activityItems: [url], applicationActivities: nil) }
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }

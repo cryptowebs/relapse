@@ -9,13 +9,7 @@ struct BadHabitBreakerApp: App {
             ZStack {
                 AppTheme.bgGradient.ignoresSafeArea()
                 Group {
-                    if store.state.hasOnboarded {
-                        HomeView()
-                            .environmentObject(store)
-                    } else {
-                        OnboardingView()
-                            .environmentObject(store)
-                    }
+                    if store.state.hasOnboarded { MainTabsView().environmentObject(store) } else { OnboardingView().environmentObject(store) }
                 }
             }
             .preferredColorScheme(.dark)
