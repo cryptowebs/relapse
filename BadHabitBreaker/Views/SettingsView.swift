@@ -20,6 +20,7 @@ struct SettingsView: View {
                     Button("Save reminders") {
                         let times = [time1, time2, time3]
                         store.setReminders(enabled: enabled, times: times)
+                        Haptics.success()
                     }
                 }
                 
@@ -27,9 +28,12 @@ struct SettingsView: View {
                     Text("Relapses logged: \(store.state.relapseLog.count)")
                     Button(role: .destructive) {
                         store.completeOnboarding(habit: store.state.habit)
+                        Haptics.warning()
                     } label: { Text("Reset onboarding (keeps data)") }
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(AppTheme.bgGradient.ignoresSafeArea())
             .onAppear {
                 enabled = store.state.dailyRemindersEnabled
                 if store.state.reminderTimes.count >= 3 {

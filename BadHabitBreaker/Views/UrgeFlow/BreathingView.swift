@@ -26,19 +26,15 @@ struct BreathingView: View {
             }
             .frame(width: 180, height: 180)
             
-            Button("Next") {
-                advance()
-            }
-            .buttonStyle(.borderedProminent)
+            Button("Next") { advance() }
+                .buttonStyle(.borderedProminent)
         }
         .onAppear { startStep() }
     }
     
     private func startStep() {
         phase = 0
-        withAnimation(.linear(duration: script[step].1)) {
-            phase = 1
-        }
+        withAnimation(.linear(duration: script[step].1)) { phase = 1 }
         DispatchQueue.main.asyncAfter(deadline: .now() + script[step].1) {
             advance()
         }
@@ -47,8 +43,10 @@ struct BreathingView: View {
     private func advance() {
         if step < script.count - 1 {
             step += 1
+            Haptics.lightTap()
             startStep()
         } else {
+            Haptics.success()
             onDone()
         }
     }

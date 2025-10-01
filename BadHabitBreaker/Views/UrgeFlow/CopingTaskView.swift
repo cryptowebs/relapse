@@ -12,14 +12,14 @@ struct CopingTaskView: View {
                 .font(.title3)
                 .multilineTextAlignment(.center)
                 .padding()
-                .background(.thinMaterial)
-                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
+                .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(.white.opacity(0.06)))
             
             HStack {
-                Button("New idea") { task = Self.randomTask() }
-                .buttonStyle(.bordered)
-                Button("Done") { onDone() }
-                .buttonStyle(.borderedProminent)
+                Button("New idea") { task = Self.randomTask(); Haptics.lightTap() }
+                    .buttonStyle(.bordered)
+                Button("Done") { Haptics.success(); onDone() }
+                    .buttonStyle(.borderedProminent)
             }
         }
     }

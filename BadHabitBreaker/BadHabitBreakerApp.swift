@@ -6,18 +6,21 @@ struct BadHabitBreakerApp: App {
 
     var body: some Scene {
         WindowGroup {
-            Group {
-                if store.state.hasOnboarded {
-                    HomeView()
-                        .environmentObject(store)
-                } else {
-                    OnboardingView()
-                        .environmentObject(store)
+            ZStack {
+                AppTheme.bgGradient.ignoresSafeArea()
+                Group {
+                    if store.state.hasOnboarded {
+                        HomeView()
+                            .environmentObject(store)
+                    } else {
+                        OnboardingView()
+                            .environmentObject(store)
+                    }
                 }
             }
-            .task {
-                await NotificationManager.shared.requestAuthorization()
-            }
+            .preferredColorScheme(.dark)
+            .tint(AppTheme.accent)
+            .task { await NotificationManager.shared.requestAuthorization() }
         }
     }
 }

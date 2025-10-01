@@ -10,66 +10,78 @@ struct HomeView: View {
         return h.type == .custom ? (h.customName ?? "My Habit") : h.type.display
     }
     
+    var riskScore: Double {
+        let hour = Calendar.current.component(.hour, from: Date())
+        let timeRisk: Double = (18...23).contains(hour) ? 0.55 : (14...17).contains(hour) ? 0.35 : 0.2
+        let days = max(store.state.streakDays, 0)
+        let streakRisk = days < 3 ? 0.5 : (days < 7 ? 0.35 : 0.15)
+        return min(1.0, max(0.0, 0.6*timeRisk + 0.4*streakRisk))
+    }
+    
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 16) {
-                    // Streak
-                    HStack {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("\(habitName)")
-                                .font(.title2).bold()
-                            Text("Streak: \(store.state.streakDays) day\(store.state.streakDays == 1 ? "" : "s")")
-                                .font(.headline)
-                            Text("Successful urges: \(store.state.successfulUrges)")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                    }
-                    .padding()
-                    .background(.thinMaterial)
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
-                    
-                    // Panic Plan
+                VStack(spacing: 18) {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Panic plan")
-                            .font(.headline)
+                        HStack(spacing: 10) {
+                            Image(systemName: "wind.circle.fill")
+                                .symbolRenderingMode(.hierarchical)
+                                .font(.system(size: 34))
+                                .foregroundStyle(AppTheme.accent)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(habitName).font(.title2.weight(.bold))
+                                HStack(spacing: 8) {
+                                    Label("\(store.state.streakDays) day\(store.state.streakDays == 1 ? "" : "s")", systemImage: "flame.fill")
+                                        .foregroundStyle(.orange)
+                                    Label("\(store.state.successfulUrges)", systemImage: "checkmark.circle.fill")
+                                        .foregroundStyle(.green)
+                                }
+                                .font(.subheadline)
+                            }
+                            Spacer()
+                        }
+                    }
+                    .glassCard()
+                    
+                    RiskMeterView(score: riskScore)
+                    
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack {
+                            Label("Plan for an urge", systemImage: "shield.lefthalf.filled")
+                                .font(.headline)
+                            Spacer()
+                        }
                         Text(store.state.habit.panicPlan)
                             .font(.body)
+                            .foregroundStyle(.primary)
+                            .multilineTextAlignment(.leading)
                     }
-                    .padding()
-                    .background(Color(.secondarySystemBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .glassCard()
                     
-                    // Triggers
                     if !store.state.habit.triggers.isEmpty {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Common triggers")
+                        VStack(alignment: .leading, spacing: 10) {
+                            Label("Common triggers", systemImage: "exclamationmark.triangle.fill")
                                 .font(.headline)
                             FlowLayout(items: store.state.habit.triggers) { t in
                                 Text(t)
-                                    .padding(.horizontal, 10).padding(.vertical, 6)
-                                    .background(.ultraThinMaterial)
-                                    .clipShape(Capsule())
+                                    .font(.callout.weight(.medium))
+                                    .padding(.horizontal, 12).padding(.vertical, 7)
+                                    .background(.thinMaterial, in: Capsule())
+                                    .overlay(Capsule().strokeBorder(.white.opacity(0.06)))
                             }
                         }
-                        .padding()
-                        .background(Color(.secondarySystemBackground))
-                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .glassCard()
                     }
                     
-                    // Big button
                     Button {
+                        Haptics.lightTap()
                         showFlow = true
                     } label: {
-                        Text("I’m having an urge")
-                            .font(.title2).bold()
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 20)
+                        Label("I’m having an urge", systemImage: "lifepreserver.fill")
+                            .font(.title3.weight(.bold))
                     }
-                    .buttonStyle(.borderedProminent)
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .buttonStyle(PrimaryButtonStyle())
+                    .padding(.top, 4)
                 }
                 .padding()
             }
@@ -80,13 +92,21 @@ struct HomeView: View {
                 }
             }
             .sheet(isPresented: $showFlow) {
-                UrgeFlowView()
-                    .presentationDetents([.medium, .large])
-                    .environmentObject(store)
+                ZStack {
+                    AppTheme.bgGradient.ignoresSafeArea()
+                    UrgeFlowView()
+                        .environmentObject(store)
+                        .presentationDetents([.medium, .large])
+                }
             }
             .sheet(isPresented: $showSettings) {
-                SettingsView().environmentObject(store)
+                ZStack {
+                    AppTheme.bgGradient.ignoresSafeArea()
+                    SettingsView()
+                        .environmentObject(store)
+                }
             }
+            .scrollIndicators(.hidden)
         }
     }
 }
@@ -120,18 +140,11 @@ struct FlowLayout<Content: View, T: Hashable>: View {
                             height -= d.height
                         }
                         let result = width
-                        if item == items.last! {
-                            width = 0
-                        } else {
-                            width += d.width
-                        }
+                        width += d.width
                         return result
                     }
                     .alignmentGuide(.top) { _ in
                         let result = height
-                        if item == items.last! {
-                            height = 0
-                        }
                         return result
                     }
             }

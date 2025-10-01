@@ -11,7 +11,7 @@ struct OnboardingView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Pick the habit") {
+                Section {
                     Picker("Habit", selection: $selected) {
                         ForEach(HabitType.allCases) { t in
                             Text(t.display).tag(t)
@@ -20,16 +20,22 @@ struct OnboardingView: View {
                     if selected == .custom {
                         TextField("Name your habit", text: $customName)
                     }
+                } header: {
+                    Text("Pick the habit")
                 }
                 
-                Section("Your triggers") {
+                Section {
                     TextField("Semicolon-separated", text: $triggersText)
                         .textInputAutocapitalization(.never)
                         .font(.callout)
+                } header: {
+                    Text("Your triggers")
                 }
                 
-                Section("Panic plan") {
-                    TextEditor(text: $panicPlan).frame(minHeight: 100)
+                Section {
+                    TextEditor(text: $panicPlan).frame(minHeight: 110)
+                } header: {
+                    Text("Panic plan")
                 }
                 
                 Section {
@@ -46,12 +52,16 @@ struct OnboardingView: View {
                         )
                         store.completeOnboarding(habit: config)
                     } label: {
-                        Text("Start")
-                            .frame(maxWidth: .infinity)
+                        Label("Start", systemImage: "arrow.right.circle.fill")
                     }
+                    .buttonStyle(PrimaryButtonStyle())
+                    .listRowInsets(EdgeInsets())
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(AppTheme.bgGradient.ignoresSafeArea())
             .navigationTitle("Set up")
         }
+        .tint(AppTheme.accent)
     }
 }

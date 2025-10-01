@@ -20,9 +20,11 @@ struct UrgeFlowView: View {
                     .tag(UrgeStep.doTask)
                 LogOutcomeView(onSuccess: {
                     store.logSuccess()
+                    Haptics.success()
                     dismiss()
                 }, onRelapse: { trigger, notes in
                     store.logRelapse(trigger: trigger, notes: notes)
+                    Haptics.warning()
                     dismiss()
                 })
                 .tag(UrgeStep.log)
@@ -35,7 +37,8 @@ struct UrgeFlowView: View {
     
     private func next(_ s: UrgeStep) {
         completed.insert(step)
-        withAnimation { step = s }
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { step = s }
+        Haptics.lightTap()
     }
     private func dismiss() {
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)

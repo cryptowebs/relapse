@@ -17,12 +17,15 @@ struct DelayTimerView: View {
             Text(timeString(secondsRemaining))
                 .font(.system(size: 48, weight: .bold, design: .rounded))
                 .monospacedDigit()
+                .contentTransition(.numericText())
             
             ProgressView(value: Double(600 - secondsRemaining), total: 600)
+                .tint(.white)
             
             HStack {
                 Button(running ? "Pause" : "Start") {
                     running.toggle()
+                    Haptics.lightTap()
                 }
                 .buttonStyle(.borderedProminent)
                 
@@ -34,7 +37,10 @@ struct DelayTimerView: View {
         }
         .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { _ in
             guard running else { return }
-            if secondsRemaining > 0 { secondsRemaining -= 1 }
+            if secondsRemaining > 0 {
+                secondsRemaining -= 1
+                if secondsRemaining % 60 == 0 { Haptics.lightTap() }
+            }
             if secondsRemaining == 0 { onDone() }
         }
         .onChange(of: phase) { newPhase in
